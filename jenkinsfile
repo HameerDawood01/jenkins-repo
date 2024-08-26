@@ -1,0 +1,60 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "simple-html-page"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Source code ko Git repository se checkout karein
+                git 'https://github.com/username/repository-name.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // Docker image ko build karein
+                    sh "docker build -t ${IMAGE_NAME} ."
+                }
+            }
+        }
+
+        stage('Test Docker Image') {
+            steps {
+                script {
+                    // Docker container ko test karne ke liye run karein
+                    sh "docker run -d -p 8081:80 --name ${IMAGE_NAME}-test ${IMAGE_NAME}"
+                    
+                    // Wait karein thoda time ke liye (optional)
+                    sh "sleep 10"
+                    
+                    // Test ke liye curl se request bhejein
+                    sh "curl -I http://localhost:8080"
+                    
+                    // Container ko stop aur remove karein
+                    sh "docker stop ${IMAGE_NAME}-test"
+                    sh "docker rm ${IMAGE_NAME}-test"
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                script {
+                    // Final deployment ke liye Docker container ko run karein
+                    sh "docker run -d -p 8081:80 --name ${IMAGE_NAME}-prod ${IMAGE_NAME}"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            // Clean up Docker images (optional)
+            sh "docker rmi ${IMAGE_NAME} || true"
+        }
+    }
+}
